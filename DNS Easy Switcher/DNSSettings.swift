@@ -20,7 +20,7 @@ final class CustomDNSServer: Identifiable {
     var name: String
     var servers: [String]
     var timestamp: Date
-    
+
     init(id: String = UUID().uuidString,
          name: String,
          servers: [String],
@@ -37,7 +37,7 @@ final class DNSSettings {
     @Attribute(.unique) var id: String
     var activeServerID: String?
     var timestamp: Date
-    
+
     init(id: String = UUID().uuidString,
          activeServerID: String? = nil,
          timestamp: Date = Date()) {
