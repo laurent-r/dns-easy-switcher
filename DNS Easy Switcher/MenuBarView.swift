@@ -15,6 +15,7 @@ struct MenuBarView: View {
     @State private var isUpdating = false
     @State private var isSpeedTesting = false
     @State private var pingResults: [DNSSpeedTester.PingResult] = []
+    @State private var aboutWindowController: CustomSheetWindowController?
     @State private var windowController: CustomSheetWindowController?
 
     private var activeServerID: String? {
@@ -188,6 +189,11 @@ struct MenuBarView: View {
 
                 Divider()
 
+                Button("About") {
+                    showAboutSheet()
+                }
+                .padding(.vertical, 5)
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
@@ -283,4 +289,18 @@ struct MenuBarView: View {
             }
         }
     }
+
+    private func showAboutSheet() {
+        let aboutView = AboutView {
+            aboutWindowController?.close()
+            aboutWindowController = nil
+        }
+
+        aboutWindowController?.close()
+        aboutWindowController = CustomSheetWindowController(view: aboutView, title: "About")
+        aboutWindowController?.window?.level = .floating
+        aboutWindowController?.showWindow(nil)
+        aboutWindowController?.window?.center()
+    }
+
 }
