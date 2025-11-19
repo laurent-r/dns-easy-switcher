@@ -88,12 +88,116 @@ class DNSManager {
 
     private func findActiveServices() -> [String] {
         let services = getNetworkServices()
-        let activeServices = services.filter {
-            $0.lowercased().contains("wi-fi") || $0.lowercased().contains("ethernet")
+        let deviceMap = getServiceDeviceMap()
+
+        var active: [String] = []
+        for service in services {
+            if serviceHasIPv4(service) {
+                active.append(service)
+                continue
+            }
+
+            if let device = deviceMap[service], isDeviceActive(device) {
+                active.append(service)
+            }
         }
-        let chosen = activeServices.isEmpty ? [services.first].compactMap { $0 } : activeServices
+
+        let chosen = active.isEmpty ? [services.first].compactMap { $0 } : active
         logger.info("Active services: \(chosen.joined(separator: ", "), privacy: .public)")
         return chosen
+    }
+
+    private func getServiceDeviceMap() -> [String: String] {
+        let task = Process()
+        task.launchPath = "/usr/sbin/networksetup"
+        task.arguments = ["-listnetworkserviceorder"]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+
+        var map: [String: String] = [:]
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                var currentService: String?
+                for rawLine in output.components(separatedBy: .newlines) {
+                    let line = rawLine.trimmingCharacters(in: .whitespaces)
+                    if line.hasPrefix("(") {
+                        if let range = line.range(of: ") ") {
+                            let name = String(line[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                            currentService = name
+                        }
+                    } else if line.contains("Device:") {
+                        let parts = line.components(separatedBy: "Device:")
+                        if parts.count >= 2 {
+                            var dev = parts[1].trimmingCharacters(in: .whitespaces)
+                            if let endParen = dev.firstIndex(of: ")") {
+                                dev = String(dev[..<endParen])
+                            }
+                            if let svc = currentService {
+                                map[svc] = dev
+                            }
+                        }
+                    }
+                }
+            }
+        } catch {
+            logger.error("Failed to get service-device map: \(String(describing: error), privacy: .public)")
+        }
+        return map
+    }
+
+    private func serviceHasIPv4(_ service: String) -> Bool {
+        let task = Process()
+        task.launchPath = "/usr/sbin/networksetup"
+        task.arguments = ["-getinfo", service]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                for rawLine in output.components(separatedBy: .newlines) {
+                    let line = rawLine.trimmingCharacters(in: .whitespaces)
+                    if line.lowercased().hasPrefix("ip address:") {
+                        let value = line.replacingOccurrences(of: "IP address:", with: "").trimmingCharacters(in: .whitespaces)
+                        if !value.isEmpty && value.lowercased() != "none" {
+                            return true
+                        }
+                    }
+                }
+            }
+        } catch {
+            logger.error("Failed to get info for service \(service, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+        return false
+    }
+
+    private func isDeviceActive(_ device: String) -> Bool {
+        let task = Process()
+        task.launchPath = "/sbin/ifconfig"
+        task.arguments = [device]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                if output.contains("status: active") { return true }
+                let hasInet4 = output.contains(" inet ") && !output.contains(" inet 127.0.0.1")
+                let hasInet6 = output.contains(" inet6 ") && !output.contains(" inet6 fe80:")
+                return hasInet4 || hasInet6
+            }
+        } catch {
+            logger.error("Failed to read interface \(device, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+        return false
     }
 
 
