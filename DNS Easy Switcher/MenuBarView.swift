@@ -45,7 +45,7 @@ struct MenuBarView: View {
                     HStack {
                         Text("<No DNS Override>")
                         Spacer()
-                        if false /*activeServerID == nil*/ { //TODO: disabled until we can reliably detect this
+                        if activeServerID == nil {
                             Image(systemName: "checkmark")
                         }
                     }

@@ -148,8 +148,6 @@ class DNSManager {
         // For DNS servers with custom ports, we need to modify the resolver configuration
         let resolverContent = createResolverContent(servers)
 
-        // We'll use the existing executeWithAuthentication method which properly handles
-        // authentication with Touch ID or admin password
         let createDirCmd = "/bin/mkdir -p /etc/resolver"
         executeAdminScript(command: createDirCmd) { [self] dirSuccess in
             guard dirSuccess else {
@@ -303,7 +301,7 @@ class DNSManager {
         // Regular IPv4 address without port, return as is
         return dnsServer
     }
-    
+
 
     func clearDNSCache(completion: @escaping (Bool) -> Void) {
         let flushCommand = "dscacheutil -flushcache"
