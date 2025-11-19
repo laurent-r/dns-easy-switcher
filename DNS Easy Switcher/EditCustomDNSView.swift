@@ -12,13 +12,13 @@ struct EditCustomDNSView: View {
     var onComplete: (CustomDNSServer?) -> Void
 
     @State private var name: String
-    @State private var servers: [String]
+    @State private var serversLine: String
 
     init(server: CustomDNSServer, onComplete: @escaping (CustomDNSServer?) -> Void) {
         self.server = server
         self.onComplete = onComplete
         _name = State(initialValue: server.name)
-        _servers = State(initialValue: server.servers)
+        _serversLine = State(initialValue: server.servers.joined(separator: " "))
     }
 
     var body: some View {
@@ -26,13 +26,9 @@ struct EditCustomDNSView: View {
             TextField("Name (e.g. Work DNS)", text: $name)
                 .textFieldStyle(.roundedBorder)
 
-            TextField("Primary DNS (e.g. 8.8.8.8 or 127.0.0.1:5353)", text: $servers[0])
+            TextField("Space-separated DNS servers (e.g. 8.8.8.8 8.8.4.4)", text: $serversLine)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
-
-            TextField("Secondary DNS (optional)", text: $servers[1])
-                .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+                .help("Each server has an IPv4 or IPv6 address and an optional :port (e.g. 127.0.0.1:5353)")
 
             HStack {
                 Button("Cancel") {
@@ -43,20 +39,21 @@ struct EditCustomDNSView: View {
                 Spacer()
 
                 Button("Save") {
-                    guard !name.isEmpty && !servers[0].isEmpty else { return }
+                    let parts = serversLine.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                    guard !name.isEmpty && !parts.isEmpty else { return }
                     let updatedServer = CustomDNSServer(
                         id: server.id,
                         name: name,
-                        servers: servers.filter { !$0.isEmpty }, // Filter out empty strings
+                        servers: parts,
                         timestamp: server.timestamp
                     )
                     onComplete(updatedServer)
                 }
                 .keyboardShortcut(.return)
-                .disabled(name.isEmpty || servers[0].isEmpty)
+                .disabled(name.isEmpty || serversLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 350)
     }
 }

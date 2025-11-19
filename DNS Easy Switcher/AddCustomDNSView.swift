@@ -10,43 +10,40 @@ import SwiftData
 
 struct AddCustomDNSView: View {
     @State private var name: String = ""
-    @State private var servers: [String] = ["", ""] // Initialize with two empty strings for primary/secondary
+    @State private var serversLine: String = ""
     var onComplete: (CustomDNSServer?) -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Name (e.g. Work DNS)", text: $name)
                 .textFieldStyle(.roundedBorder)
-            
-            TextField("Primary DNS (e.g. 8.8.8.8 or 127.0.0.1:5353)", text: $servers[0])
-                .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
 
-            TextField("Secondary DNS (optional)", text: $servers[1])
+            TextField("Space-separated DNS servers (e.g. 8.8.8.8 8.8.4.4)", text: $serversLine)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
-            
+                .help("Each server has an IPv4 or IPv6 address and an optional :port (e.g. 127.0.0.1:5353)")
+
             HStack {
                 Button("Cancel") {
                     onComplete(nil)
                 }
                 .keyboardShortcut(.escape)
-                
+
                 Spacer()
-                
+
                 Button("Add") {
-                    guard !name.isEmpty && !servers[0].isEmpty else { return }
+                    let parts = serversLine.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                    guard !name.isEmpty && !parts.isEmpty else { return }
                     let server = CustomDNSServer(
                         name: name,
-                        servers: servers.filter { !$0.isEmpty } // Filter out empty strings
+                        servers: parts
                     )
                     onComplete(server)
                 }
                 .keyboardShortcut(.return)
-                .disabled(name.isEmpty || servers[0].isEmpty)
+                .disabled(name.isEmpty || serversLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 350)
     }
 }

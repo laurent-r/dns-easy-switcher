@@ -38,7 +38,7 @@ struct CustomDNSManagerView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(server.name).fontWeight(.bold)
-                                Text(server.servers.joined(separator: ", "))
+                                Text(server.servers.joined(separator: "   "))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
