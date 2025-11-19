@@ -162,7 +162,7 @@ class DNSManager {
             \(resolverContent)
             EOF
             """
-            self.executeAdminScript(command: writeFileCmd) { fileSuccess in
+            self.executeAdminScript(command: writeFileCmd) { [self] fileSuccess in
                 guard fileSuccess else {
                     logger.error("Failed to write resolver configuration")
                     completion(false)
@@ -171,7 +171,7 @@ class DNSManager {
 
                 // Set permissions
                 let permCmd = "/bin/chmod 644 /etc/resolver/custom"
-                self.executeAdminScript(command: permCmd) { permSuccess in
+                self.executeAdminScript(command: permCmd) { [self] permSuccess in
                     if !permSuccess {
                         logger.error("Failed to set resolver file permissions")
                         completion(false)
@@ -225,7 +225,7 @@ class DNSManager {
                 let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
                 logger.info("Resetting DNS for service \(service, privacy: .public)")
 
-                self.executeAdminScript(command: command) { success in
+                self.executeAdminScript(command: command) { [self] success in
                     if !success {
                         allSucceeded = false
                         logger.error("DNS reset failed for service \(service, privacy: .public)")
