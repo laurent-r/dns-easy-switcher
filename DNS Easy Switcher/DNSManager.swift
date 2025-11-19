@@ -223,17 +223,8 @@ class DNSManager {
         }
     }
 
-    func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
-        let services = findActiveServices()
-        guard !services.isEmpty else {
-            completion(false)
-            return
-        }
 
-        setStandardDNS(services: services, servers: dnsServers, completion: completion)
-    }
-
-    func setCustomDNS(servers: [String], completion: @escaping (Bool) -> Void) {
+    func setDNS(servers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
         guard !services.isEmpty else {
             completion(false)

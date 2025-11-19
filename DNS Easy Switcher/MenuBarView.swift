@@ -254,11 +254,11 @@ struct MenuBarView: View {
 
         switch type {
         case .predefined(let server):
-            DNSManager.shared.setPredefinedDNS(dnsServers: server.servers) { success in
+            DNSManager.shared.setDNS(servers: server.servers) { success in
                 completion(success, server.id)
             }
         case .custom(let server):
-            DNSManager.shared.setCustomDNS(servers: server.servers) { success in
+            DNSManager.shared.setDNS(servers: server.servers) { success in
                 completion(success, server.id)
             }
         }
