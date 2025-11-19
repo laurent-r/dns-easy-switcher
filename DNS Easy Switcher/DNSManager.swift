@@ -136,7 +136,7 @@ class DNSManager {
             return
         }
 
-        // Check if any server contains a port specification
+        // Check if any server contains an IPv4 address with port specification
         let hasPort = servers.contains { $0.contains(".") && $0.contains(":") }
 
         // If no custom ports are specified, use the standard network setup method
@@ -201,6 +201,7 @@ class DNSManager {
             }
         }
 
+        logger.info("Custom resolver content:\n\(resolverContent, privacy: .public)")
         return resolverContent
     }
 
@@ -247,9 +248,10 @@ class DNSManager {
         var serversWithoutPort: [String] = []
 
         for server in servers {
-            // Extract IP address without port
-            if server.contains(":") {
-                serversWithoutPort.append(server.components(separatedBy: ":")[0])
+            // Extract IP address without port (only for IPv4 addresses)
+            let components = server.split(separator: ":", omittingEmptySubsequences: false)
+            if components.count == 2 {
+                serversWithoutPort.append(String(components[0]))
             } else {
                 serversWithoutPort.append(server)
             }
@@ -268,6 +270,7 @@ class DNSManager {
 
             let dnsArgs = servers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
+            logger.info("Setting DNS for service \(service, privacy: .public) to \(dnsArgs, privacy: .public)")
 
             executeAdminScript(command: dnsCommand) { [self] success in
                 if !success {
@@ -283,23 +286,6 @@ class DNSManager {
         dispatchGroup.notify(queue: .main) {
             completion(allSucceeded)
         }
-    }
-
-    // Helper method to format DNS with port
-    private func formatDNSWithPort(_ dnsServer: String) -> String {
-        // If DNS server already includes a port (contains colon), return as is
-        if dnsServer.contains(":") {
-            return dnsServer
-        }
-
-        // If it's an IPv6 address that needs a port, format properly with square brackets
-        if dnsServer.contains("::") || dnsServer.components(separatedBy: ":").count > 2 {
-            // IPv6 addresses with ports need to be formatted as [address]:port
-            return dnsServer
-        }
-
-        // Regular IPv4 address without port, return as is
-        return dnsServer
     }
 
 
