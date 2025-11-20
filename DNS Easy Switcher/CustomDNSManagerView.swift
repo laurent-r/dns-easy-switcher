@@ -7,6 +7,8 @@
 
 import SwiftUI
 import SwiftData
+import AppKit
+import UniformTypeIdentifiers
 
 struct CustomDNSManagerView: View {
     @Environment(\.modelContext) private var modelContext
@@ -86,6 +88,18 @@ struct CustomDNSManagerView: View {
                 .help("Edit selected DNS")
 
                 Spacer()
+
+                Button(action: { exportCustomDNS() }) {
+                    Image(systemName: "square.and.arrow.up")
+                        .frame(width: 16, height: 16)
+                }
+                .help("Export custom DNS to a text file")
+
+                Button(action: { importCustomDNS() }) {
+                    Image(systemName: "square.and.arrow.down")
+                        .frame(width: 16, height: 16)
+                }
+                .help("Import custom DNS from a text file")
             }
             .padding()
         }
@@ -129,5 +143,94 @@ struct CustomDNSManagerView: View {
     private func delete(server: CustomDNSServer) {
         modelContext.delete(server)
         try? modelContext.save()
+    }
+
+    private func exportCustomDNS() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType.plainText]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "CustomDNS.txt"
+        if panel.runModal() == .OK, let url = panel.url {
+            let lines = customServers.map { server in
+                let serversList = server.servers.joined(separator: " ")
+                let escapedName = escapeName(server.name)
+                return "\(escapedName): \(serversList)"
+            }.joined(separator: "\n")
+            do {
+                try lines.write(to: url, atomically: true, encoding: .utf8)
+            } catch {
+            }
+        }
+    }
+
+    private func importCustomDNS() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType.plainText]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                let content = try String(contentsOf: url, encoding: .utf8)
+                let lines = content.components(separatedBy: .newlines)
+                for line in lines {
+                    let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty { continue }
+                    guard let colon = indexOfUnescapedColon(in: trimmed) else { continue }
+                    let rawName = String(trimmed[..<colon]).trimmingCharacters(in: .whitespaces)
+                    let name = unescapeName(rawName)
+                    let serversString = String(trimmed[trimmed.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                    let parts = serversString.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                    if parts.isEmpty { continue }
+
+                    if let existing = customServers.first(where: { $0.name == name }) {
+                        existing.servers = parts
+                    } else {
+                        let newServer = CustomDNSServer(name: name, servers: parts)
+                        modelContext.insert(newServer)
+                    }
+                }
+                try? modelContext.save()
+            } catch {
+            }
+        }
+    }
+
+    private func escapeName(_ name: String) -> String {
+        var s = name.replacingOccurrences(of: "\\", with: "\\\\")
+        s = s.replacingOccurrences(of: ":", with: "\\:")
+        return s
+    }
+
+    private func unescapeName(_ s: String) -> String {
+        var result = ""
+        var iterator = s.makeIterator()
+        var prevWasEscape = false
+        while let ch = iterator.next() {
+            if prevWasEscape {
+                result.append(ch)
+                prevWasEscape = false
+            } else if ch == "\\" {
+                prevWasEscape = true
+            } else {
+                result.append(ch)
+            }
+        }
+        if prevWasEscape { result.append("\\") }
+        return result
+    }
+
+    private func indexOfUnescapedColon(in s: String) -> String.Index? {
+        var prevWasEscape = false
+        for idx in s.indices {
+            let ch = s[idx]
+            if prevWasEscape {
+                prevWasEscape = false
+                continue
+            }
+            if ch == "\\" { prevWasEscape = true; continue }
+            if ch == ":" { return idx }
+        }
+        return nil
     }
 }
