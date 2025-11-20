@@ -16,6 +16,7 @@ struct MenuBarView: View {
     @State private var pingResults: [DNSSpeedTester.PingResult] = []
     @State private var showingAddDNS = false
     @State private var showingManageDNS = false
+    @State private var aboutWindowController: CustomSheetWindowController?
     @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
     
@@ -236,7 +237,12 @@ struct MenuBarView: View {
                 .disabled(isUpdating || isSpeedTesting)
                 
                 Divider()
-                
+
+                Button("About") {
+                    showAboutSheet()
+                }
+                .padding(.vertical, 5)
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
@@ -335,7 +341,7 @@ struct MenuBarView: View {
     }
     
     private func showManageCustomDNSSheet() {
-        let manageView = CustomDNSManagerView(customServers: customServers) { action, server in
+        let manageView = CustomDNSManagerView(customServers: customServers, onAction: { action, server in
             switch action {
             case .edit:
                 editCustomDNS(server)
@@ -364,7 +370,10 @@ struct MenuBarView: View {
                 windowController?.close()
                 windowController = nil
             }
-        }
+        }, onClose: {
+            windowController?.close()
+            windowController = nil
+        })
         
         windowController = CustomSheetWindowController(view: manageView, title: "Manage Custom DNS")
         windowController?.window?.level = .floating
@@ -382,6 +391,19 @@ struct MenuBarView: View {
         }
     }
     
+    private func showAboutSheet() {
+        let aboutView = AboutView {
+            aboutWindowController?.close()
+            aboutWindowController = nil
+        }
+        
+        aboutWindowController?.close()
+        aboutWindowController = CustomSheetWindowController(view: aboutView, title: "About")
+        aboutWindowController?.window?.level = .floating
+        aboutWindowController?.showWindow(nil)
+        aboutWindowController?.window?.center()
+    }
+    
     private func editCustomDNS(_ server: CustomDNSServer) {
         let editView = EditCustomDNSView(server: server) { updatedServer in
             if let updatedServer = updatedServer {
@@ -389,6 +411,8 @@ struct MenuBarView: View {
                 server.name = updatedServer.name
                 server.primaryDNS = updatedServer.primaryDNS
                 server.secondaryDNS = updatedServer.secondaryDNS
+                server.tertiaryDNS = updatedServer.tertiaryDNS
+                server.quaternaryDNS = updatedServer.quaternaryDNS
                 try? modelContext.save()
                 
                 // If this was the active server, update DNS settings
@@ -479,7 +503,7 @@ struct MenuBarView: View {
                 isUpdating = false
             }
         case .custom(let server):
-            DNSManager.shared.setCustomDNS(primary: server.primaryDNS, secondary: server.secondaryDNS) { success in
+            DNSManager.shared.setCustomDNS(servers: server.dnsEntries) { success in
                 if success {
                     Task { @MainActor in
                         updateSettings(type: type)
@@ -489,7 +513,7 @@ struct MenuBarView: View {
             }
         case .getflix(let location):
             if let dnsServer = DNSManager.shared.getflixServers[location] {
-                DNSManager.shared.setCustomDNS(primary: dnsServer, secondary: "") { success in
+                DNSManager.shared.setCustomDNS(servers: [dnsServer]) { success in
                     if success {
                         Task { @MainActor in
                             updateSettings(type: type)
