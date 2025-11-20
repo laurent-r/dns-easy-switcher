@@ -234,12 +234,6 @@ struct MenuBarView: View {
         windowController = CustomSheetWindowController(view: manageView, title: "Manage Custom DNS")
         windowController?.window?.level = .floating
         windowController?.showWindow(nil)
-
-        if let window = windowController?.window, let screenFrame = NSScreen.main?.frame {
-            let windowFrame = window.frame
-            let newOrigin = NSPoint(x: screenFrame.width - windowFrame.width - 20, y: screenFrame.height - 40 - windowFrame.height)
-            window.setFrameTopLeftPoint(newOrigin)
-        }
     }
 
     private func activateDNS(type: DNSType) {
