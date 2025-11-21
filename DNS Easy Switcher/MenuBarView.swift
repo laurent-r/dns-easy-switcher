@@ -219,9 +219,13 @@ struct MenuBarView: View {
         pingResults = []
 
         let allPredefined = DNSManager.predefinedServers + DNSManager.getflixServers
-        DNSSpeedTester.shared.testAllDNS(predefinedServers: allPredefined, customServers: customServers) { results in
-            self.pingResults = results
-            self.isSpeedTesting = false
+
+        Task {
+            await DNSSpeedTester.shared.testAllDNS(predefinedServers: allPredefined, customServers: customServers) { results in
+                // Completion is already on MainActor from DNSSpeedTester
+                self.pingResults = results
+                self.isSpeedTesting = false
+            }
         }
     }
 
