@@ -402,4 +402,60 @@ class DNSManager {
             }
         }
     }
+
+    func getSystemDefaultResolver() -> String? {
+        let services = findActiveServices()
+        guard !services.isEmpty else { return nil }
+
+        var anyOverride = false
+        for service in services {
+            let task = Process()
+            task.launchPath = "/usr/sbin/networksetup"
+            task.arguments = ["-getdnsservers", service]
+
+            let pipe = Pipe()
+            task.standardOutput = pipe
+            do {
+                try task.run()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+                if output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    continue
+                }
+                if !output.contains("There aren't any DNS Servers set") && !output.lowercased().contains("empty") {
+                    anyOverride = true
+                    break
+                }
+            } catch {
+            }
+        }
+
+        if anyOverride { return nil }
+
+        let task = Process()
+        task.launchPath = "/usr/sbin/scutil"
+        task.arguments = ["--dns"]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            var resolvers: [String] = []
+            for line in output.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("nameserver[") {
+                    if let range = trimmed.range(of: ":") {
+                        let addr = trimmed[range.upperBound...].trimmingCharacters(in: .whitespaces)
+                        if !addr.isEmpty { resolvers.append(String(addr)) }
+                    }
+                }
+            }
+            if let ipv4 = resolvers.first(where: { $0.contains(".") }) { return ipv4 }
+            return resolvers.first
+        } catch {
+            return nil
+        }
+    }
 }
