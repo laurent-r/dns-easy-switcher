@@ -17,7 +17,6 @@ struct MenuBarView: View {
     @State private var pingResults: [DNSSpeedTester.PingResult] = []
     @State private var aboutWindowController: CustomSheetWindowController?
     @State private var windowController: CustomSheetWindowController?
-    @State private var systemDefaultResolver: String?
 
     private var activeServerID: String? {
         settings.first?.activeServerID
@@ -38,7 +37,6 @@ struct MenuBarView: View {
                         isUpdating = true
                         DNSManager.shared.disableDNS { success in
                             if success {
-                                self.systemDefaultResolver = DNSManager.shared.getSystemDefaultResolver()
                                 updateActiveServer(id: nil)
                             }
                             isUpdating = false
@@ -46,7 +44,7 @@ struct MenuBarView: View {
                     }
                 }) {
                     HStack {
-                        Text(getLabelWithPing(noOverrideLabel(), for: "system-default"))
+                        Text("<No DNS Override>")
                         Spacer()
                         if activeServerID == nil {
                             Image(systemName: "checkmark")
@@ -205,7 +203,6 @@ struct MenuBarView: View {
         }
         .onAppear {
             ensureSettingsExist()
-            systemDefaultResolver = DNSManager.shared.getSystemDefaultResolver()
         }
     }
 
@@ -216,20 +213,13 @@ struct MenuBarView: View {
         return "\(baseLabel) (\(Int(result.responseTime))ms)"
     }
 
-    private func noOverrideLabel() -> String {
-        if let ip = systemDefaultResolver, !ip.isEmpty {
-            return "<No DNS Override : \(ip)>"
-        }
-        return "<No DNS Override>"
-    }
-
     private func runSpeedTest() {
         guard !isSpeedTesting else { return }
         isSpeedTesting = true
         pingResults = []
 
         let allPredefined = DNSManager.predefinedServers + DNSManager.getflixServers
-        DNSSpeedTester.shared.testAllDNS(predefinedServers: allPredefined, customServers: customServers, systemDefaultResolver: systemDefaultResolver) { results in
+        DNSSpeedTester.shared.testAllDNS(predefinedServers: allPredefined, customServers: customServers) { results in
             self.pingResults = results
             self.isSpeedTesting = false
         }

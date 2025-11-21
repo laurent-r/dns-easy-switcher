@@ -25,7 +25,7 @@ class DNSSpeedTester {
     private var isCurrentlyTesting = false
 
     // Perform ping test for all DNS servers including custom ones
-    func testAllDNS(predefinedServers: [PredefinedDNSServer], customServers: [CustomDNSServer], systemDefaultResolver: String?, completion: @escaping ([PingResult]) -> Void) {
+    func testAllDNS(predefinedServers: [PredefinedDNSServer], customServers: [CustomDNSServer], completion: @escaping ([PingResult]) -> Void) {
         guard !isCurrentlyTesting else {
             completion([])
             return
@@ -38,9 +38,6 @@ class DNSSpeedTester {
         tasksLock.unlock()
 
         var allDNSToTest: [(id: String, name: String, serverToPing: String)] = []
-        if let defaultResolver = systemDefaultResolver, !defaultResolver.isEmpty {
-            allDNSToTest.append((id: "system-default", name: "<No DNS Override>", serverToPing: defaultResolver))
-        }
 
         // Add predefined and Getflix servers
         allDNSToTest.append(contentsOf: predefinedServers.map {
@@ -186,5 +183,4 @@ class DNSSpeedTester {
         }
         return nil
     }
-    
 }
