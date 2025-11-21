@@ -95,7 +95,7 @@ struct MenuBarView: View {
                         Text("GetFlix DNS")
                         Spacer()
                         if activeServerID?.hasPrefix("getflix-") == true {
-                            Circle().fill(Color.green).frame(width: 8, height: 8)
+                            Image(systemName: "checkmark")
                         }
                         if isSpeedTesting {
                             ProgressView().scaleEffect(0.6).frame(width: 12, height: 12).padding(.trailing, 4)
@@ -126,7 +126,7 @@ struct MenuBarView: View {
                             Text("Custom DNS")
                             Spacer()
                             if let activeID = activeServerID, customServers.contains(where: { $0.id == activeID }) {
-                                Circle().fill(Color.green).frame(width: 8, height: 8)
+                                Image(systemName: "checkmark")
                             }
                             if isSpeedTesting {
                                 ProgressView().scaleEffect(0.6).frame(width: 12, height: 12).padding(.trailing, 4)
